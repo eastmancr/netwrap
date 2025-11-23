@@ -1,0 +1,13 @@
+# Binaries
+netwrap
+
+# Build artifacts
+*.pkg.tar.zst
+*.log
+pkg/
+src/
+
+# Test artifacts
+test.nw
+udp_server.py
+udp_client.py

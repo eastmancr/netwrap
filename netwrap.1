@@ -1,0 +1,89 @@
+.TH NETWRAP 1 "November 2025" "1.0" "Netwrap Manual"
+.SH NAME
+netwrap \- run a program in an isolated network namespace
+.SH SYNOPSIS
+.B netwrap
+[\fIOPTIONS\fR] \fIPROGRAM\fR [\fIARGS\fR...]
+.br
+.B netwrap
+\fISCRIPT_FILE\fR
+.SH DESCRIPTION
+.B netwrap
+is a lightweight tool to run a program in an isolated Linux network namespace. It creates a new namespace, sets up a virtual ethernet pair, assigns a random private IP (in the 10.200.x.0/24 range), and executes the specified command inside it.
+
+It supports TCP and UDP port forwarding from the host to the isolated container, allowing services to be exposed selectively.
+
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+.TP
+.BR \-n ", " \-\-network =\fINAME\fR
+Join an existing named network namespace or create one with the specified name. If the namespace exists, the program will join it and share its network stack (IP address, localhost). If it does not exist, it will be created.
+.TP
+.BI \- HOST_PORT : CLIENT_PORT [/ PROTOCOL ]
+Map a network port from the host to the client program.
+.br
+For example, \fB-8080:80\fR forwards TCP traffic from host port 8080 to container port 80.
+.br
+To specify UDP, append \fB/udp\fR (e.g., \fB-53:53/udp\fR).
+.br
+The default protocol is TCP.
+.br
+Multiple mappings can be specified.
+.TP
+.B \-\-
+Stop parsing \fBnetwrap\fR options. All subsequent arguments are treated as the program command and its arguments.
+
+.SH SCRIPT MODE
+\fBnetwrap\fR can be used as a shebang interpreter for script files.
+In this mode, the file is parsed line-by-line.
+.P
+- Lines are treated as netwrap arguments, optionally with their dash (\fB-\fR or \fB--\fR).
+.br
+- Lines starting with \fB#\fR are comments.
+.br
+- The final line or sequence of escaped lines is the command to execute.
+.P
+Example \fBmyserver.nw\fR:
+.RS
+.nf
+#!/usr/bin/env netwrap
+n = my-service
+8080:80
+python3 \\
+  -m \\
+  http.server \\
+  80
+.fi
+.RE
+
+.SH PERMISSIONS
+\fBnetwrap\fR can detect if it actually needs elevation.
+If the user does not have the ability to create networks, \fBnetwrap\fR will prompt for elevation with \fBsudo\fR.
+.P
+To allow \fBnetwrap\fR to run as a non-root user, add this line to the \fB/etc/sudoers\fR file:
+.RS
+.nf
+$USER ALL = NOPASSWD: SETENV: /path/to/netwrap
+.fi
+.RE
+.P
+Note: file capabilities (\fBsetcap(8)\fR) are insufficient because \fBnetwrap\fR executes the \fBip\fR command, which does not inherit file capabilities.
+
+.SH EXAMPLES
+.TP
+Run a Python HTTP server isolated, mapping port 8080 to 80:
+.B netwrap -8080:80 -- python3 -m http.server 80
+.TP
+Run a shell inside a new isolated network (no internet access):
+.B netwrap sh
+.TP
+Join a shared network named 'backend':
+.B netwrap -n backend ./my-worker
+
+.SH REQUIREMENTS
+\fBnetwrap\fR requires \fBip\fR (iproute2) installed. It attempts to gain privileges via \fBsudo\fR if run as a non-root user.
+
+.SH SEE ALSO
+\fBip-netns\fR(8), \fBsudo\fR(8)
