@@ -3,6 +3,7 @@ netwrap
 
 # Build artifacts
 *.pkg.tar.zst
+*.pkg.tar.zst.sig
 *.log
 pkg/
 src/
